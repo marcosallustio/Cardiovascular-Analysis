@@ -1,0 +1,946 @@
+---
+title: "Cardiovascular Disease Analysis"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+***Project Foundations of Probability and Statistics***
+
+*Marco Sallustio (906149), Yasmin Bouhdada(837389), Alessandro Rota(798050)*
+
+# Index
+
+1.  [Library]
+
+2.  [Importing Data]
+
+3.  [Target Variable]
+
+4.  [Age Analysis]
+
+5.  [Sex Analysis]
+
+6.  [Chest Pain Analysis]
+
+7.  [Rest Blood Pressure Analysis]
+
+8.  [Cholestrol Analysis]
+
+9.  [Fasting Blood Sugar Analysis]
+
+10. [Resting ECG Result]
+
+11. [Maximum Heart Rate]
+
+12. [Exercise Induced Angina]
+
+13. [OldPeak Analysis]
+
+14. [Slope Analysis]
+
+15. [Ca Analysis]
+
+16. [Test]
+
+    1.  [Chi-Squared Test]
+
+    2.  [Shapiro-Wilk Test]
+
+17. [Correlation]
+
+18. [Linear Regression]
+
+    1.  [Age-Trestbps]
+
+    2.  [Age-Chol]
+
+    3.  [Age-Heart Rate]
+
+    4.  [Age-Oldpeak]
+
+    5.  [Chol-Trestbps]
+
+    6.  [Chol-Heart Rate]
+
+    7.  [Chol-Oldpeak]
+
+    8.  [Trestbps-Heart Rate]
+
+    9.  [Trestbps-Oldpeak]
+
+    10. [Oldpeak-Heart Rate]
+
+19. [Residuals]
+
+# Library
+
+```{r}
+library(ggplot2)
+library(ggforce)
+library(corrplot)
+```
+
+# Importing Data
+
+Heart disease is a catch-all phrase for a variety of conditions that affect the heart's structure and function. Coronary heart disease is a type of heart disease that develops when the arteries of the heart cannot deliver enough oxygen-rich blood to the heart. It is the leading cause of death in the United States.
+
+Now we will carry out an analysis in which we try to understand the causes that lead to a heart attack, analyzing different parameters like the heart rate during exercise or the cholesterol levels in the blood.
+
+The dataset was downloaded from the following link: <https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset>
+
+```{r}
+heart<-read.csv("heart.csv")
+head(heart)
+```
+
+```{r}
+dim(heart)
+```
+
+Description of dataset variables:
+
+-   ***age***: The person's age in years
+
+-   ***sex***: The person's sex (1 = male, 0 = female)
+
+-   ***cp***: chest pain type\
+    --- Value 0: asymptomatic\
+    --- Value 1: atypical angina\
+    --- Value 2: non-anginal pain\
+    --- Value 3: typical angina
+
+-   ***trestbps***: The person's resting blood pressure (mm Hg on admission to the hospital)
+
+-   ***chol***: The person's cholesterol measurement in mg/dl
+
+-   ***fbs***: The person's fasting blood sugar (\> 120 mg/dl, 1 = true; 0 = false)
+
+-   ***restecg***: resting electrocardiographic results\
+    --- Value 0: showing probable or definite left ventricular hypertrophy by Estes' criteria\
+    --- Value 1: normal\
+    --- Value 2: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of \> 0.05 mV)
+
+-   ***thalach***: The person's maximum heart rate achieved
+
+-   ***exang***: Exercise induced angina (1 = yes; 0 = no)
+
+-   ***oldpeak***: ST depression induced by exercise relative to rest ('ST' relates to positions on the ECG plot. See more here)
+
+-   ***slope***: the slope of the peak exercise ST segment --- 0: downsloping; 1: flat; 2: upsloping\
+    0: downsloping; 1: flat; 2: upsloping
+
+-   ***ca***: The number of major vessels (0--3)
+
+-   ***thal***: A blood disorder called thalassemia Value 0: NULL (dropped from the dataset previously\
+    Value 1: fixed defect (no blood flow in some part of the heart)\
+    Value 2: normal blood flow\
+    Value 3: reversible defect (a blood flow is observed but it is not normal)
+
+-   ***target***: Heart disease (1 = yes, 0= no)
+
+```{r}
+str(heart)
+```
+
+```{r}
+heart$target<-as.numeric(heart$target)
+```
+
+# Target Variable
+
+```{r}
+q=table(heart$target)
+```
+
+From this plot we can see that in our dataset there are more cases of heart attack(Target=1) than cases in which it did not occur(Target=0).
+
+```{r}
+barplot(q,
+       col=c("red","green"),
+       legend=rownames(q),
+       xlab="Target",
+       ylab="Count",
+       main="Barplot of Target")
+```
+
+# Age analysis
+
+Minimum age is 29 and Maximum age is 77.
+
+```{r}
+range(heart$age)
+```
+
+Average age of Population is 54.43.
+
+```{r}
+summary(heart$age)
+```
+
+```{r}
+age_interval <- c(29, 35, 41, 47, 53, 59, 65, 71, 77)
+age_abs_freq <- table(cut(heart$age, age_interval))
+age_rel_freq <- round(age_abs_freq/sum(age_abs_freq),3)
+age_summary <- cbind(age_abs_freq,cumsum(age_abs_freq), age_rel_freq,cumsum(age_rel_freq))
+colnames(age_summary) <- c(
+  "Absolute",
+  "Cum. absolute",
+  "Relative",
+  "Cum. relative")
+age_summary
+```
+
+There is low negative correlation between age and dependent variable target. This shows that on increasing age probability of heart attack is decreasing.
+
+```{r}
+cor(heart$age,heart$target)
+```
+
+```{r}
+hist(heart$age,labels=TRUE,main="Histogram of Age",xlab="Age Class",ylab="Frequency",col="green")
+```
+
+```{r}
+boxplot(heart$age,vertical=TRUE,main="Boxplot of Age")
+```
+
+After fitting a smooth curve we can see that from age 30 to 60 probability of heart attack decrease and from 60 the curve reverses its trend. After 70 chance of heart attack is high.
+
+```{r}
+a=ggplot(heart,aes(x=age,y=target))+geom_point()+geom_smooth(color="red")
+b=a+scale_x_continuous(name="Age")+scale_y_continuous(name="Target")
+b+ggtitle("Scatter plot with smooth curve between age and target")
+```
+
+# Sex Analysis
+
+This variable has 2 category 0 represents female and 1 means male. For easier understanding let's change the value of this column. F denotes female individuals and M denotes male individuals.
+
+```{r}
+heart$sex <-factor(heart$sex)
+levels(heart$sex) <-c("F","M")
+```
+
+Out of 1025 Observations 312 of them are Female and 713 are male.
+
+```{r}
+table(heart$sex)
+```
+
+```{r}
+a=table(heart$sex)
+par(mfrow=c(1,2))
+```
+
+In barplot it is clearly visible that proportion of male is more as compared to female.
+
+```{r}
+barplot(a,
+       col=c("pink","lightblue"),
+       legend=rownames(a),
+       xlab="Female and Male",
+       ylab="Count",
+       main="Barplot of SEX")
+```
+
+Also in Pie chart we can see that proportion of female is 30 % while male is 70%.
+
+```{r}
+pct=round(a/sum(a)*100)
+lbs=paste(c("Female","Male")," ",pct,"%",sep=" ")
+pie(a,labels=lbs,col=c("pink","lightblue"),main="Percentage of Male and Female")
+```
+
+```{r}
+b=table(heart$sex,heart$target)
+b
+```
+
+In side by side Barchart we can see that in case of not suffered with Heart Attack, Feamle is very less while more male has survived heart attack.
+
+```{r}
+barplot(b,
+       col=c("pink","lightblue"),
+       legend=rownames(b),
+       beside=TRUE,
+       xlab="Target",
+       ylab="Count",
+       main="Side by Side Barplot")
+
+
+```
+
+```{r}
+ggplot(heart, aes(x=heart$age, color=heart$sex)) +
+  geom_histogram(fill="white")
+```
+
+# Chest Pain Analysis
+
+```{r}
+heart$cp=factor(heart$cp)
+d=table(heart$cp)
+```
+
+There is 4 category of Chest pain starting from 0 up to 3.
+
+```{r}
+d
+```
+
+In barplot it is clear that, People having Chest pain 0 are more followed by 2.
+
+```{r}
+barplot(d,
+       col=rainbow(6),
+       main="Barplot of Chest pain",
+       xlab="Chest Pain Category",
+       ylab="Count",
+       legend=rownames(d))
+```
+
+We can Visualize through smooth curve between age and target that People having Chest Pain 0 and age from 40 to 65 are less likely to get heart attack.
+
+People with chest pain 2 are more likely to get heart attack.
+
+```{r}
+e=ggplot(heart,aes(x=age,y=target))+geom_point(aes(shape=cp,color=cp))+geom_smooth()
+e+scale_x_continuous(name="Age")+scale_y_continuous(name="Probability of Heart Attack")+ggtitle("Age and target with Chest Pain category")
+```
+
+# Rest Blood Pressure Analysis
+
+Minimum RBP(Rest Blood Pressure) is 94 and Maximum is 200.
+
+Average RBP is 131.6
+
+```{r}
+summary(heart$trestbps)
+```
+
+```{r}
+trestbps_interval <- c(94,111,128,145,162,179,200)
+tbs_abs_freq <- table(cut(heart$trestbps, trestbps_interval))
+tbs_rel_freq <- round(tbs_abs_freq/sum(tbs_abs_freq),3)
+tbs_summary <- cbind(tbs_abs_freq,cumsum(tbs_abs_freq), tbs_rel_freq,cumsum(tbs_rel_freq))
+colnames(tbs_summary) <- c(
+  "Absolute",
+  "Cum. absolute",
+  "Relative",
+  "Cum. relative")
+tbs_summary
+```
+
+```{r}
+boxplot(heart$trestbps,
+       col="red",
+       main="Descriptive Analysis of RBP",
+       horizontal=FALSE)
+
+boxplot.stats(heart$trestbps)
+```
+
+We can clearly see in Histogram, Maximum number of Population have Rest Blood Pressure between 120 and 140.
+
+```{r}
+hist(heart$trestbps,col=rainbow(7),
+    main="Histogram for RBP",
+    xlab="Rest Blood Pressure Class",
+    ylab="Frequency",
+    labels=TRUE)
+```
+
+People having RBP between 95 and 110 are more likely to get Heart Attack.
+
+We can see in smooth curve probability of Heart Attack is decreasing after RBP 135.
+
+```{r}
+f=ggplot(heart,aes(x=trestbps,y=target))+geom_point(shape=6)+geom_smooth()
+f+scale_x_continuous(name="Rest Blood Pressure")+scale_y_continuous(name="Target")+ggtitle("Smooth Curve Between RBP and Target")
+```
+
+Comparison of Blood pressure across pain type:
+
+```{r}
+ggplot(heart,aes(x=sex,y=trestbps))+
+  geom_boxplot(fill="darkorange")+
+  xlab("Sex")+
+  ylab("BP")+
+  facet_grid(~cp)
+```
+
+```{r}
+ggplot(heart, aes(x=sex, y=trestbps, color=sex)) +
+geom_sina()+
+scale_color_manual(values=c('hotpink', "royalblue"))+
+labs(title="Rest Blood Pressure Distribution by sex")+
+theme(plot.title = element_text(size=14))
+```
+
+# Cholestrol Analysis
+
+Minimum Cholestrol among patients is 126, Maxmum is 564 and Average Cholestrol is 246.
+
+```{r}
+summary(heart$chol)
+```
+
+```{r}
+chol_interval <- c(126,188,250,312,374,436,498,564)
+chol_abs_freq <- table(cut(heart$chol, chol_interval))
+chol_rel_freq <- round(chol_abs_freq/sum(chol_abs_freq),3)
+chol_summary <- cbind(chol_abs_freq,cumsum(chol_abs_freq), chol_rel_freq,cumsum(chol_rel_freq))
+colnames(chol_summary) <- c(
+  "Absolute",
+  "Cum. absolute",
+  "Relative",
+  "Cum. relative")
+chol_summary
+```
+
+We can see Boxplot for descriptive Analysis seperately for Male and Female. In boxplot it is also clear that Male has lower colestrol than Female.
+
+```{r}
+boxplot(heart$chol~as.factor(heart$sex),col=rainbow(2),main="Descriptive Analysis of Chol with Male and Female",
+       xlab="Female or Male",
+       ylab="Cholestrol")
+```
+
+We can clearly see in Histogram that maximum population have cholestrol between 200 and 250 unit.
+
+```{r}
+hist(heart$chol,
+    main="Histogram of Cholestrol",
+    xlab="Cholestrol Class",
+    ylab="Frequency",
+    col=rainbow(7),labels=TRUE)
+heart$sex=as.factor(heart$sex)
+```
+
+In Smooth curve we can clearly see that probability of Heart attack is increasing after cholestrol level 300.
+
+```{r}
+ggplot(heart,aes(x=chol,y=target))+geom_point(aes(shape=sex,color=sex))+geom_smooth()+ggtitle("Smooth Curve b/w Chol and Target with Factor Sex")+scale_x_continuous(name="Cholestrol Level")+scale_y_continuous(name="Target")
+```
+
+In this plot the size of each point is adjusted according to the cholesterol level.
+
+```{r}
+ggplot(heart,aes(x=age,y=chol,color=sex, size=chol))+
+  geom_point(alpha=0.7)+xlab("Age") +
+  ylab("Cholestoral")+
+  guides(fill = guide_legend(title = "Gender"))
+```
+
+Comparison of Cholestoral across pain type:
+
+```{r}
+ggplot(heart,aes(x=sex,y=chol))+
+  geom_boxplot(fill="#D55E00")+
+  xlab("Sex")+
+  ylab("Chol")+
+  facet_grid(~cp)
+```
+
+# Fasting Blood Sugar Analysis
+
+This is a Categorical Variable in which 0 means level is less than 120 unit and 1 means it is greater than 120 unit.
+
+```{r}
+summary(heart$fbs)
+```
+
+```{r}
+h=table(heart$fbs)
+par(mfrow=c(1,2))
+```
+
+In Bar chart and Pie chart it is clearly visible that maximum(85% of the population) Peoples have FBS less than 120.
+
+```{r}
+barplot(h,
+       main="Barplot for FBS",
+       xlab="FBS: 0-->level<120,1-->level>120",
+       ylab="Count",
+       col=rainbow(2),
+       legend=rownames(h))
+```
+
+```{r}
+pct=round(h/sum(h)*100)
+lbs=paste(c("fbs<120","fbs>120")," ",pct,"%",sep=" ")
+pie(h,lbs,main="Pie Chart of FBS",col=c("pink","blue"))
+```
+
+# Resting ECG result
+
+There is 3 Category in this Variable 0,1 and 2.
+
+Category 2 of ECG is very less and category 1 or 2 are nearly same.
+
+```{r}
+j=table(heart$restecg)
+barplot(j,
+       main="Barplot of Rest ECG",
+       xlab="ECG Category",
+       ylab="Count",
+       col=rainbow(3),legend=rownames(j))
+```
+
+```{r}
+ggplot(heart, aes(x=sex, y=restecg, color=sex)) +
+geom_sina()+
+scale_color_manual(values=c('hotpink', "royalblue"))+
+labs(title="Rest ECG Distribution by sex")+
+theme(plot.title = element_text(size=14))
+```
+
+# Maximum Heart Rate
+
+This is continous data with minimum heart rate achieved 71 and maximum 202.
+
+```{r}
+summary(heart$thalach)
+```
+
+```{r}
+thalach_age <- c(71,92,113,134,155,176,202)
+thalach_abs_freq <- table(cut(heart$thalach, thalach_age))
+thalach_rel_freq <- round(thalach_abs_freq/sum(thalach_abs_freq),3)
+thalach_summary <- cbind(thalach_abs_freq,cumsum(thalach_abs_freq), thalach_rel_freq,cumsum(thalach_rel_freq))
+colnames(thalach_summary) <- c(
+  "Absolute",
+  "Cum. absolute",
+  "Relative",
+  "Cum. relative")
+thalach_summary
+```
+
+In boxplot we can see that Maximum heart Rate achieved is greater in Male than Female.
+
+```{r}
+boxplot(heart$thalach~as.factor(heart$sex),
+       main="Boxplot of Thalac with Sex Category",
+       xlab="Sex: Female or Male",
+       ylab="Maximum Heart Rate Achieved",
+       col=c("pink","lightblue"))
+```
+
+With correlation we can see how age is effecting Heart Rate. There is negative corelation between age and heart rate, this means on getting older Heart rate is decreasing which can also be seen clearly in smooth curve.
+
+```{r}
+cor(heart$age,heart$thalach)
+```
+
+```{r}
+ggplot(heart,aes(x=age,y=thalach))+geom_point()+geom_smooth()+
+    scale_x_continuous(name="Age")+
+    scale_y_continuous(name="Maximum Heart Rate Achieved")+
+    ggtitle("Relationship Between Age and Heart Rate")
+```
+
+We can also see scatter plot and smooth curve between Heart rate and Heart Attack, On increasing Heart rate probability of getting Heart attack is increasing.
+
+```{r}
+ggplot(heart,aes(x=thalach,y=target))+geom_point()+geom_smooth()+
+    scale_x_continuous(name="Maximum Heart Rate Achieved")+
+    scale_y_continuous(name="Prob. of Heart Attack")+
+    ggtitle("Relationship Between Heart rate and Heart attack")
+```
+
+# Exercise Induced Angina
+
+Angine is a type of Chest Pain caused by induced flow of blood to heart. This variable is categorical(Two category 0 and 1) where 0 means no Exang.
+
+```{r}
+k=table(heart$exang,heart$target)
+k
+```
+
+We can clearly see in stacked barplot that people with no Exang is more likely to get Heart Attack.
+
+```{r}
+barplot(k,
+       legend=rownames(k),
+       col=rainbow(2),
+       main="Stacked Barplot of Exang and Target",
+       xlab="Target",
+       ylab="Count")
+```
+
+# OldPeak Analysis
+
+Oldpeak is ST depression induced by exercise relative to rest. This variable is numeric with minimum being 0 and maximum 6.200.
+
+```{r}
+summary(heart$oldpeak)
+```
+
+We can see in Histogram maximum population is lying between 0 and 0.5 .
+
+```{r}
+hist(heart$oldpeak,
+    main="Histogram of Oldpeak",
+    xlab="Oldpeak Class",
+    ylab="Frequency",
+    col=rainbow(7),
+    labels=TRUE)
+
+```
+
+Data is right skewed, not normally distributed.
+
+```{r}
+plot(density(heart$oldpeak),
+    main="Density plot of Oldpeak",
+    xlab="Oldpeak",
+    ylab="Density")
+polygon(density(heart$oldpeak),col="violet",border="black")
+```
+
+In boxplot we can see that oldpeak is generally more in male as compared to female. Also their are some outliers(bad data) which is represented by circle above boxplot.
+
+```{r}
+boxplot(heart$oldpeak,main="Descriptive Analysis of Oldpeak",col="pink")
+```
+
+```{r}
+boxplot(heart$oldpeak~heart$sex,main="Descriptive Analysis of Oldpeak",col=c("pink","lightblue"),xlab="F: Female, M:Male",ylab="Oldpeak")
+```
+
+In smooth curve between oldpeak and Heart attack we can see that there is a decreasing trend between them. In general on increasing oldpeak probability of heart attack is decreasing.
+
+```{r}
+ggplot(heart,aes(x=oldpeak,y=target))+geom_point()+geom_smooth(color="red")+
+    scale_x_continuous(name="OldPeak")+
+    scale_y_continuous(name="Prob. of Heart Attack")+
+    ggtitle("Relation between oldpeak and heart attack")
+```
+
+# Slope Analysis
+
+Slope of Peak Exercise: This is integer datatype with 3 categories 0,1 and 2.
+
+```{r}
+unique(heart$slope)
+```
+
+In barplot we can see that population with slope 1 and 2 are nearly same and in maximum number.
+
+```{r}
+l=table(heart$slope)
+barplot(l,
+       main="Barplot of Slope",
+       xlab="Slope",
+       ylab="Count",col="orange")
+```
+
+In stacked barplot we can see that people with oldpeak category 2 is more likely to get heart attack and with 1 category is less likely to get heart attack
+
+```{r}
+m=table(heart$slope,heart$target)
+barplot(m,
+       main="Stacked barplot of slope and target",
+       col=rainbow(3),
+       xlab="Target",
+       ylab="Count",legend=rownames(m))
+```
+
+In smooth curve between slope and target we can see that after unit 1 of slope with increase in slope, probability of heart attack is increasing.
+
+```{r}
+ggplot(heart,aes(x=slope,y=target))+geom_point()+geom_smooth(method="loess",color="cyan")+
+    scale_x_continuous(name="Slope")+
+    scale_y_continuous(name="Target")+
+    ggtitle("Relationship between Slope and Target")
+```
+
+# Ca Analysis
+
+The Number of masor Vesseles: 0-4 colored by Flourosopy. In barplot we can see that, Most of population are with 0 ca category.
+
+```{r}
+n=table(heart$ca)
+barplot(n,
+       main="Barplot of ca",
+       xlab="ca",
+       col=rainbow(5),
+       legend=rownames(n),
+       ylab="Count")
+```
+
+By chance in stacked barplot between ca and target, we can see that people with ca category 0 are more likely to get heart attack.
+
+```{r}
+o=table(heart$target,heart$ca)
+barplot(o,
+       main="Stacked Barplot of ca and Target",
+       xlab="ca",
+        col=rainbow(2),
+       legend=rownames(o),
+       ylab="Count")
+```
+
+In smooth curve between ca and target, we can see that there is local minima at ca category 2, First on increasing ca prob. of heart attack is decreasing again after local minima on increasing ca, prob of heart attack is increasing.
+
+```{r}
+ggplot(heart,aes(x=ca,y=target))+geom_point()+geom_smooth(method="loess",color="red")+
+    scale_x_continuous(name="ca")+
+    scale_y_continuous(name="Target")+
+    ggtitle("Relationship between ca and Target")
+```
+
+# Test
+
+### Chi-Squared Test
+
+With this test we can verify if the variable target is dependent on age. We can see that p-value is less than 0.05, so target is depending on age.
+
+```{r}
+chisq.test(heart$age,heart$target)
+```
+
+With Chi square test we can see how age and Hear Rate is correlating. We can see in chi square test between age and Heart Rate, P value is less than 0.05 so Heart Rate is depending on Age.
+
+```{r}
+chisq.test(heart$age,heart$thalach)
+```
+
+### Shapiro-Wilk Test
+
+Now, we want to determine if the variable chol (cholesterol), trestbps (blood pressure) and thalach (Heart rate) are normally distributed.
+
+```{r}
+par(mfrow=c(1,3))
+qqnorm(heart$chol, main = "Cholesterol distribution")
+qqline(heart$chol)
+qqnorm(heart$trestbps, main ="Blood Pressure distribution")
+qqline(heart$trestbps)
+qqnorm(heart$thalach, main ="Heart Rate distribution")
+qqline(heart$thalach)
+```
+
+From the normaly probability plot we can see that all variables differ from the normal distribution.
+
+Now, with this test we can verify the null hypothesis.
+
+```{r}
+shapiro.test(heart$chol)
+```
+
+```{r}
+shapiro.test(heart$trestbps)
+```
+
+```{r}
+shapiro.test(heart$thalach)
+```
+
+In fact, the three tests carried out have a p value less than 5%, so we can reject the null hypothesis.
+
+# Correlation
+
+To avoid analyzing non-existent correlations, it was chosen to analyze only relationships that are believed to have an interesting relationship.
+
+```{r}
+pairs(heart[c(1,4,5,8,10)],pch=20,gap = 0.2)
+```
+
+```{r}
+cor_heart=cor(heart[c(1,4,5,8,10)])
+```
+
+With this corrplot it is possible to see through the use of colors the correlations present between the chosen variables.
+
+```{r}
+corrplot(cor_heart, type="upper",method = "color")
+```
+
+# Linear Regression
+
+### Age-Trestbps
+
+```{r}
+cor(heart$age,heart$trestbps)
+```
+
+```{r}
+lm_AT = lm (heart$age ~ heart$trestbps)
+summary(lm_AT)
+```
+
+```{r}
+plot(heart$age ~ heart$trestbps, xlab = "trestbps", ylab= "age", col = alpha(blues9))
+abline(coef(lm_AT), col = "red", lwd=1.5)
+```
+
+It is therefore obtained that there is a relationship between age and rest blood pressure but the low value of the coefficient of determination R-squared does not fully/correctly explain the data, or that the variance of the residuals is very high.
+
+### Age-Chol
+
+```{r}
+cor(heart$age,heart$chol)
+```
+
+```{r}
+lm_AC = lm (heart$age ~ heart$chol)
+summary(lm_AC)
+```
+
+```{r}
+plot(heart$age ~ heart$chol, xlab = "chol", ylab= "age", col = alpha(blues9))
+abline(coef(lm_AC), col = "red", lwd=1.5)
+```
+
+Also in this case very similar results to the previous ones were obtained; in particular it can be noted that there is a correlation (even if it is low) between age and cholesterol value but the low value of the coefficient of determination R-squared does not fully/correctly explain the data.
+
+### Age-Heart Rate
+
+```{r}
+cor(heart$age,heart$thalach)
+```
+
+```{r}
+lm_AHR = lm (heart$age ~ heart$thalach)
+summary(lm_AHR)
+```
+
+```{r}
+plot(heart$age ~ heart$thalach, xlab = "thalach", ylab= "age", col = alpha(blues9))
+abline(coef(lm_AHR), col = "red", lwd=1.5)
+```
+
+### Age-Oldpeak
+
+```{r}
+cor(heart$age,heart$oldpeak)
+```
+
+```{r}
+lm_AO = lm (heart$age ~ heart$oldpeak)
+summary(lm_AO)
+```
+
+```{r}
+plot(heart$age ~ heart$oldpeak, xlab = "age", ylab= "oldpeak", col = alpha(blues9))
+abline(coef(lm_AO), col = "red", lwd=1.5)
+```
+
+### Chol-Trestbps
+
+```{r}
+cor(heart$chol,heart$trestbps)
+```
+
+```{r}
+lm_CT = lm (heart$chol ~ heart$trestbps)
+summary(lm_CT)
+```
+
+```{r}
+plot(heart$chol ~ heart$trestbps, xlab = "trestbps", ylab= "chol", col = alpha(blues9))
+abline(coef(lm_CT), col = "red", lwd=1.5)
+```
+
+### Chol-Heart Rate
+
+```{r}
+cor(heart$chol,heart$thalach)
+```
+
+```{r}
+lm_CHR = lm (heart$chol ~ heart$thalach)
+summary(lm_CHR)
+```
+
+```{r}
+plot(heart$chol ~ heart$thalach, xlab = "thalach", ylab= "chol", col = alpha(blues9))
+abline(coef(lm_CHR), col = "red", lwd=1.5)
+```
+
+### Chol-Oldpeak
+
+```{r}
+cor(heart$chol,heart$oldpeak)
+```
+
+```{r}
+lm_CO = lm (heart$chol ~ heart$oldpeak)
+summary(lm_CO)
+```
+
+```{r}
+plot(heart$chol ~ heart$oldpeak, xlab = "oldpeak", ylab= "chol", col = alpha(blues9))
+abline(coef(lm_CO), col = "red", lwd=1.5)
+```
+
+### Trestbps-Heart Rate
+
+```{r}
+cor(heart$trestbps,heart$thalach)
+```
+
+```{r}
+lm_THR = lm (heart$trestbps ~ heart$thalach)
+summary(lm_THR)
+```
+
+```{r}
+plot(heart$trestbps ~ heart$thalach, xlab = "thalach", ylab= "trestbps", col = alpha(blues9))
+abline(coef(lm_THR), col = "red", lwd=1.5)
+```
+
+### Trestbps-Oldpeak
+
+```{r}
+cor(heart$trestbps,heart$oldpeak)
+```
+
+```{r}
+lm_TO = lm (heart$trestbps ~ heart$oldpeak)
+summary(lm_TO)
+```
+
+```{r}
+plot(heart$trestbps ~ heart$oldpeak, xlab = "oldpeak", ylab= "trestbps", col = alpha(blues9))
+abline(coef(lm_TO), col = "red", lwd=1.5)
+```
+
+### Oldpeak-Heart Rate
+
+```{r}
+cor(heart$oldpeak,heart$thalach)
+```
+
+```{r}
+lm_OT = lm (heart$oldpeak ~ heart$thalach)
+summary(lm_OT)
+```
+
+```{r}
+plot(heart$oldpeak ~ heart$thalach, xlab = "thalach", ylab= "oldpeak", col = alpha(blues9))
+abline(coef(lm_OT), col = "red", lwd=1.5)
+```
+
+In this case instead a very negative correlation value was obtained with respect to the previous ones. This will mean that the oldpeak value is not at all correlated with the heart rate value.
+
+In conclusion, after having analyzed the correlations and the linear regression model, we can state that satisfactory results have not been obtained, as most of the results obtained have certainly been lower than expected.
+
+# Residuals
+
+Residual plots are used to look for underlying patterns in the residuals that may mean that the model has a problem. Now, we will will be analysed only the regression model between age and cholesterol.
+
+When we look at the first plot, we see that the data does not have any obvious distinct pattern. While it is slightly curved, it has equally spread residuals around the horizontal line without a distinct pattern. This is a good indication it is not a non-linear relationship.
+
+In the second plot residuals should be normally distributed and the Q-Q Plot will show this. If residuals follow close to a straight line on this plot, it is a good indication they are normally distributed. For our model, the Q-Q plot shows pretty good alignment to the the line with a few points at the top slightly offset. Probably not significant and a reasonable alignment.
+
+In the third plot test the linear regression assumption of equal variance (homoscedasticity) i.e. that the residuals have equal variance along the regression line. It is also called the Spread-Location plot. In our case the residuals do not have constant variance and the line is clearnly not horizontal.
+
+```{r}
+plot(lm_AC, which=c(1,2,3), caption= list("Residuals vs Fitted", "Normal Q-Q","Scale-Location"),qqline= TRUE, col="black")
+```
+
+```{r}
+boxplot(lm_AC[['residuals']],main='Boxplot: Residuals',ylab='residual value')
+```
